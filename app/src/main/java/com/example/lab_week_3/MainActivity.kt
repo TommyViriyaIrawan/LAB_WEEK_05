@@ -7,10 +7,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.example.lab_week_3.api.CatApiService
-import com.example.lab_week_3.model.ImageData
-import retrofit2.*
-import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.scalars.ScalarsConverterFactory
+import retrofit2.create
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,7 +20,7 @@ class MainActivity : AppCompatActivity() {
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.thecatapi.com/v1/")
-            .addConverterFactory(MoshiConverterFactory.create()) // pakai Moshi untuk parsing JSON
+            .addConverterFactory(ScalarsConverterFactory.create())
             .build()
     }
 
@@ -34,34 +36,28 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-
-        // Panggil API begitu activity dibuat
         getCatImageResponse()
     }
 
     private fun getCatImageResponse() {
         val call = catApiService.searchImages(1, "full")
-        call.enqueue(object : Callback<List<ImageData>> {
-            override fun onFailure(call: Call<List<ImageData>>, t: Throwable) {
+        call.enqueue(object : Callback<String> {
+            override fun onFailure(call: Call<String>, t: Throwable) {
                 Log.e(MAIN_ACTIVITY, "Failed to get response", t)
             }
 
             override fun onResponse(
-                call: Call<List<ImageData>>,
-                response: Response<List<ImageData>>
+                call: Call<String>, response:
+                Response<String>
             ) {
                 if (response.isSuccessful) {
-                    val firstImage = response.body()?.firstOrNull()?.imageUrl ?: "No URL"
-                    apiResponseView.text = getString(R.string.image_placeholder, firstImage)
+                    apiResponseView.text = response.body()
                 } else {
-                    Log.e(MAIN_ACTIVITY, "Error: ${response.errorBody()?.string().orEmpty()}")
+                    Log.e(
+                        MAIN_ACTIVITY, "Failed to get response\n" +
+                                response.errorBody()?.string().orEmpty()
+                    )
                 }
             }
         })
